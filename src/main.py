@@ -2,6 +2,10 @@ from tkinter import *
 from tkinter import ttk
 import re
 
+##TO DO CLEAR CODE TO NOT REPEAT
+## WRITING TO FILE
+## READING FROM FILE
+
 #list of months
 MONTHS = [
     "January",
@@ -17,11 +21,11 @@ MONTHS = [
     "November",
     "December"]
 
-costs_dict = {"January": {
+costs_dict = {}
+gains_dict = {"January": {
     "Kompen" : 12.0,
     "wokmm" : 1.0
 }}
-gains_dict = {}
 open_costs = {}
 open_gains = {}
 months_data = {}
@@ -101,8 +105,7 @@ class CostsWindow(Window):
         add_button = ttk.Button(self.window, text="Add", default="normal", command=self.add_element)
         add_button.grid(column=0, row=3, sticky=N)
         self._callback(self.month, self.value)
-        
-    
+
     def sum_value(self):
         global costs_dict
         if not self.month in costs_dict:
@@ -161,6 +164,117 @@ class CostsWindow(Window):
         else:
             return
 
+
+class GainsWindow(Window):
+    def __init__(self, root, month, callback):
+        self.list_box = None
+        self.gain_name = StringVar()
+        self.gain_value = StringVar()
+        self._callback = callback
+        self.value = 0.0
+        super().__init__(root, month)
+        self.sum_value()
+        self.open_window()
+    
+    def on_exit(self):
+        super().on_exit()
+        self.list_box = None
+
+    def open_window(self):
+        super().open_window()
+        #Filling gains list
+        global gains_dict
+        self.list_box = Listbox(self.window, height=5)
+        if self.month in gains_dict:
+            index = 0
+            for key in gains_dict[self.month].keys():
+                self.list_box.insert(index, str(key + " => " + str(gains_dict[self.month][key])))
+                index += 1
+        self.list_box.grid(column=0, row=0, sticky=(N, W, E, S))
+        self.list_box.select_set(0)
+        scrollbar = Scrollbar(self.window, orient=VERTICAL, command=self.list_box.yview)
+        scrollbar.grid(column=1, row=0, sticky=(W,N,S))
+        self.list_box['yscrollcommand'] = scrollbar.set
+
+
+        delete_button = ttk.Button(self.window, text="Delete", default="normal", command=self.delete_element)
+        delete_button.grid(column=2, row=0, sticky=(W,N))
+
+        name_label = ttk.Label(self.window, text = "Name")
+        value_label = ttk.Label(self.window, text="Value")
+
+        name_label.grid(column=0, row=1, sticky=N)
+        value_label.grid(column=1, row=1, sticky=N)
+
+        name_entry = ttk.Entry(self.window, textvariable=self.gain_name)
+        value_entry = ttk.Entry(self.window, textvariable=self.gain_value)
+
+        name_entry.grid(column=0, row=2, sticky=N)
+        value_entry.grid(column=1, row=2, sticky=N)
+
+        add_button = ttk.Button(self.window, text="Add", default="normal", command=self.add_element)
+        add_button.grid(column=0, row=3, sticky=N)
+        self._callback(self.month, self.value)
+        
+    
+    def sum_value(self):
+        global gains_dict
+        if not self.month in gains_dict:
+            return
+        values = gains_dict[self.month].values()
+        sum = 0.0
+        for value in values:
+            sum += float(value)
+        self.value = sum
+
+
+    def delete_element(self, *args):
+        global gains_dict
+        if self.list_box == None:
+            return
+        indxs = self.list_box.curselection()
+        for index in indxs:
+            tmp_title = self.list_box.get(index, index)[0].split("=>")[0].rstrip()
+            self.list_box.delete(index, index)
+            if tmp_title:
+                if self.month in gains_dict:
+                    del(gains_dict[self.month][tmp_title])
+        self.sum_value()
+        self._callback(self.month, self.value)
+
+    def add_element(self):
+        global float_regex
+        global gains_dict
+
+        if self.list_box == None:
+            return
+        if self.gain_name.get() != "" and self.gain_value.get() != "":
+            if not self.month in gains_dict:
+                gains_dict[self.month] = {}
+
+            if not re.match(float_regex, self.gain_value.get()):
+                print(f"Regex failed regex: {float_regex} : value : {self.gain_value.get()}")
+                #TO DO => add error message
+                return
+            if self.gain_name.get() in gains_dict[self.month]:
+                print("Name exists in gains")
+                #TO DO => add error message
+                return
+            self.list_box.insert(self.list_box.size(), str(self.gain_name.get() + " => " + self.gain_value.get()))
+
+            try:
+                gains_dict[self.month][self.gain_name.get()] = float(self.gain_value.get())
+            except Exception as error:
+                print(f"Error in casting string to float : {error}")
+                return
+
+            self.sum_value()
+            self._callback(self.month, self.value)
+            self.gain_name.set("")
+            self.gain_value.set("")
+        else:
+            return
+
 class MainProgram():
     def __init__(self):
         self.root = Tk()
@@ -179,6 +293,7 @@ class MainProgram():
 
         self.list_box = Listbox(self.content, height=5)
         self.initialize()
+        self.save_to_file()
     
     def configure_root(self):
         self.root.option_add('*tearOff', FALSE)
@@ -197,17 +312,21 @@ class MainProgram():
             self.display_month.set(f"Selectd month: {MONTHS[index]}")
             self.current_month = MONTHS[index]
             self.update_costs_label()
+            self.udpate_gains_label()
 
     def update_costs_label(self):
         if self.current_month in months_data:
             self.display_costs.set("Costs: " + str(months_data[self.current_month]["COSTS"]))
+        else:
+            self.display_costs.set("Costs: 0.0")
 
     def udpate_gains_label(self):
         if self.current_month in months_data:
             self.display_gain.set("Gains: " + str(months_data[self.current_month]["GAINS"]))
+        else:
+            self.display_gain.set("Gains: 0.0")
 
     def update_costs(self, month_name, value):
-        print(f"MONTH : {month_name} : {value}")
         if month_name in months_data:
             months_data[month_name]["COSTS"] = value
         self.update_costs_label()
@@ -223,22 +342,35 @@ class MainProgram():
             tmp_month = MONTHS[index]
             if tmp_month in open_costs:
                 if open_costs[tmp_month] != None:
-                    print("1#1")
-                    #print(open_costs)
                     if open_costs[tmp_month].get_active_window() == False:
-                        print("2#2")
                         open_costs[tmp_month].open_window()
-                    else:
-                        print("5#5")
                 else:
-                    print("3#3")
                     return
             else:
-                print("4#4")
                 open_costs[tmp_month] = CostsWindow(self.root, tmp_month, self.update_costs)
 
+    def update_gains(self, month_name, value):
+        if month_name in months_data:
+            months_data[month_name]["GAINS"] = value
+        self.udpate_gains_label()
+        return
+    
     def show_gains(self, *args):
-        pass
+        global open_gains
+
+        tmp_month = ""
+        indxs = self.list_box.curselection()
+        if len(indxs) == 1:
+            index = int(indxs[0])
+            tmp_month = MONTHS[index]
+            if tmp_month in open_gains:
+                if open_gains[tmp_month] != None:
+                    if open_gains[tmp_month].get_active_window() == False:
+                        open_gains[tmp_month].open_window()
+                else:
+                    return
+            else:
+                open_gains[tmp_month] = GainsWindow(self.root, tmp_month, self.update_gains)
 
     def initialize(self):
         global MONTHS
@@ -277,6 +409,11 @@ class MainProgram():
         self.list_box.select_set(0)
         self.select_month()
     
+    def save_to_file(self):
+        with open("data.txt", "w") as file:
+            file.write("D")
+        pass
+
     def main(self):
         self.root.mainloop()
 
