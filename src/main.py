@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 import re
+import json
 
 ##TO DO CLEAR CODE TO NOT REPEAT
 ## WRITING TO FILE
@@ -279,6 +280,8 @@ class MainProgram():
 
         self.data = BudgetData()
 
+        self.load_from_file()
+
         self.open_windows_costs = {}
         self.open_windows_gains = {}
 
@@ -290,10 +293,14 @@ class MainProgram():
         self.current_costs = 0.0
         self.current_gains = 0.0
 
+        self.root.protocol("WM_DELETE_WINDOW", self._on_exit)
         self.list_box = Listbox(self.content, height=5)
         self.initialize()
-        self.save_to_file()
     
+    def _on_exit(self):
+        self.save_to_file()
+        self.root.destroy()
+
     def configure_root(self):
         self.root.option_add('*tearOff', FALSE)
         self.root.columnconfigure(0, weight=1)
@@ -313,11 +320,11 @@ class MainProgram():
 
     def update_costs_label(self):
         #UPDATED
-        self.display_costs.set("Costs: " + str(self.data.get_total_costs(self.current_month)))
+        self.display_costs.set("Costs: -" + str(self.data.get_total_costs(self.current_month)))
 
     def udpate_gains_label(self):
         #UPDATED
-        self.display_gain.set("Gains: " + str(self.data.get_total_gains(self.current_month)))
+        self.display_gain.set("Gains: +" + str(self.data.get_total_gains(self.current_month)))
 
     def update_costs(self, month_name, value, name = "", toDel = False):
         #UPDATED
@@ -404,9 +411,20 @@ class MainProgram():
         self.select_month()
     
     def save_to_file(self):
-        with open("data.txt", "w") as file:
-            file.write("D")
-        pass
+        json_object = json.dumps(self.data.gains, indent=len(self.data.gains))
+        with open("data_gains.json", "w") as outfile:
+            outfile.write(json_object)
+        
+        json_object = json.dumps(self.data.costs, indent=len(self.data.costs))
+        with open("data_costs.json", "w") as outfile:
+            outfile.write(json_object)
+    
+    def load_from_file(self):
+        with open("data_gains.json", 'r') as openfile:
+            self.data.gains = json.load(openfile)
+        
+        with open("data_costs.json", 'r') as openfile:
+            self.data.costs = json.load(openfile)
 
     def main(self):
         self.root.mainloop()
