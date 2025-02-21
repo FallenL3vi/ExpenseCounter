@@ -288,6 +288,7 @@ class MainProgram():
         self.display_month = StringVar(value="Month:")
         self.display_costs = StringVar(value="Costs:")
         self.display_gain = StringVar(value="Gain:")
+        self.display_total = StringVar(value="Total:")
 
         self.current_month = ""
         self.current_costs = 0.0
@@ -317,6 +318,18 @@ class MainProgram():
             self.current_month = MONTHS[index]
             self.update_costs_label()
             self.udpate_gains_label()
+            self.update_total_label()
+
+    def update_total_label(self):
+        tmp_text = ""
+        tmp_value = self.data.get_total_gains(self.current_month) - self.data.get_total_costs(self.current_month)
+        if tmp_value > 0:
+            tmp_text = "Total: +"
+        else:
+            tmp_text = "Total: "
+
+
+        self.display_total.set(tmp_text + str(tmp_value))
 
     def update_costs_label(self):
         #UPDATED
@@ -333,6 +346,7 @@ class MainProgram():
         else:
             self.data.add_cost(month_name, name, value)
         self.update_costs_label()
+        self.update_total_label()
         return
 
     def show_costs(self, *args):
@@ -358,6 +372,7 @@ class MainProgram():
         else:
             self.data.add_gains(month_name, name, value)
         self.udpate_gains_label()
+        self.update_total_label()
         return
     
     def show_gains(self, *args):
@@ -395,6 +410,7 @@ class MainProgram():
         l_selected = ttk.Label(self.content, textvariable=self.display_month)
         l_costs = ttk.Label(self.content, textvariable=self.display_costs)
         l_gain = ttk.Label(self.content, textvariable=self.display_gain)
+        l_total = ttk.Label(self.content, textvariable=self.display_total)
 
         #Buttons
         costs_button = ttk.Button(self.content, text="Add costs", default="normal", command=self.show_costs)
@@ -403,6 +419,7 @@ class MainProgram():
         l_selected.grid(column=0, row=1,sticky=(N,W))
         l_costs.grid(column=0, row=2, sticky=(N,W))
         l_gain.grid(column=0, row=3, sticky=(N,W))
+        l_total.grid(column=0, row=4, sticky=(N,W))
 
         costs_button.grid(column=2, row=0, sticky=N)
         gains_button.grid(column=3, row=0, sticky=N)
